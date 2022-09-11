@@ -54,7 +54,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void remove(long id) {
-        if(userDB.getEmails().containsKey(id)) {
+        if (userDB.getEmails().containsKey(id)) {
             userDB.delete(id);
             log.debug("Удалён пользователь с id: {}", id);
         } else {

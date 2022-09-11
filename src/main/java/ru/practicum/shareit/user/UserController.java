@@ -24,6 +24,7 @@ public class UserController {
         log.info("Получен Get-запрос на получение всех пользователей.");
         return userService.getAllUsers();
     }
+
     @GetMapping("/{id}")
     public UserDto getUserById(@PathVariable long id) {
         log.info("Получен Get-запрос на получение пользователя c id: {}", id);
