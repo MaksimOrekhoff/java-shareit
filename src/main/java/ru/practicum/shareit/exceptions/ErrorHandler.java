@@ -7,9 +7,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class ErrorHandler {
-    @ExceptionHandler(UserExistException.class)
+    @ExceptionHandler({UserExistException.class})
     @ResponseStatus(HttpStatus.CONFLICT)
-    public ErrorResponse validationExceptionHandler(final UserExistException e) {
+    public ErrorResponse validationExceptionHandler(UserExistException e) {
+        return new ErrorResponse(e.getMessage());
+    }
+
+    @ExceptionHandler({NotAvailableBooking.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse validationExceptionHandler(NotAvailableBooking e) {
         return new ErrorResponse(e.getMessage());
     }
 
@@ -18,4 +24,11 @@ public class ErrorHandler {
     public ErrorResponse validationExceptionHandler(final NotFoundException e) {
         return new ErrorResponse(e.getMessage());
     }
+
+    @ExceptionHandler(InvalidStatusException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ErrorResponse validationExceptionHandler(final InvalidStatusException e) {
+        return new ErrorResponse(e.getMessage());
+    }
+
 }
