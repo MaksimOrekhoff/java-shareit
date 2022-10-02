@@ -12,7 +12,6 @@ import ru.practicum.shareit.exceptions.NotFoundException;
 import ru.practicum.shareit.item.ItemRepository;
 import ru.practicum.shareit.item.dto.ItemDtoUp;
 import ru.practicum.shareit.item.model.Item;
-import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.dto.UserDtoUp;
 
@@ -33,59 +32,39 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public BookingDto addNewBooking(Long userId, BookingDto bookingDto) {
         validation(userId, bookingDto);
-        List<Booking> bookings = bookingRepository.findAll().stream()
-                .filter(booking -> booking.getStatus().equals(StatusItem.APPROVED))
-                .filter(booking -> Objects.equals(booking.getItemId(), bookingDto.getItemId()))
-                .filter(booking -> booking.getStart().isAfter(bookingDto.getStart()) && booking.getEnd().isBefore(bookingDto.getStart())
-                        || booking.getStart().isAfter(bookingDto.getEnd()) && booking.getEnd().isBefore(bookingDto.getEnd()))
-                .collect(Collectors.toList());
-        if (bookings.isEmpty()) {
-            Booking booking = mapperBooking.toBooking(bookingDto);
-            booking.setBooker(userId);
-            booking.setStatus(StatusItem.WAITING);
-            Booking booking1 = bookingRepository.save(booking);
-            return mapperBooking.toBookingDto(booking1);
-        }
-        throw new NotAvailableBooking("Данный период не доступен для бронирования.");
+        Booking booking = mapperBooking.toBooking(bookingDto, userId);
+        Booking newBooking = bookingRepository.save(booking);
+        return mapperBooking.toBookingDto(newBooking);
     }
 
     @Override
     public BookingDtoUpdate update(Long userId, Long bookingId, Boolean approved) {
-        validUpdate(userId, bookingId);
-        Booking booking = bookingRepository.findById(bookingId).get();
-
-        if (approved) {
-            booking.setStatus(StatusItem.APPROVED);
-
-        } else {
-            booking.setStatus(StatusItem.REJECTED);
-        }
-        Booking booking1 = bookingRepository.save(booking);
-        BookingDtoUpdate bookingDtoApp = mapperBooking.toBookingDtoApp(booking1);
-        Item item = itemRepository.findById(booking1.getItemId()).get();
-
-        bookingDtoApp.setItem(new ItemDtoUp(item.getId(), item.getName()));
-        bookingDtoApp.setBooker(new UserDtoUp(booking1.getBooker()));
-        return bookingDtoApp;
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new NotFoundException("Такого бронирования не существует."));
+        Item item = itemRepository.findById(booking.getItemId())
+                .orElseThrow(() -> new NotFoundException("Такая вещь не существует."));
+        validUpdate(item, booking, userId);
+        StatusItem statusItem = approved ? StatusItem.APPROVED : StatusItem.REJECTED;
+        booking.setStatus(statusItem);
+        Booking newBooking = bookingRepository.save(booking);
+        return mapperBooking.toBookingDtoApp(newBooking,
+                new ItemDtoUp(item.getId(), item.getName()),
+                new UserDtoUp(newBooking.getBooker()));
     }
 
     @Override
     public BookingDtoGet findBooking(Long userId, Long bookingId) {
-
-        Optional<Booking> booking = bookingRepository.findById(bookingId);
-        if (booking.isEmpty()) {
-            throw new NotFoundException("Такого бронирования не существует.");
-        }
-        Long itemId = booking.get().getItemId();
-        Item item = itemRepository.findById(itemId).get();
-        if (!(Objects.equals(userId, booking.get().getBooker()) ||
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new NotFoundException("Такого бронирования не существует."));
+        Item item = itemRepository.findById(booking.getItemId())
+                .orElseThrow(() -> new NotFoundException("Такой вещи не существует."));
+        if (!(Objects.equals(userId, booking.getBooker()) ||
                 Objects.equals(item.getUserId(), userId))) {
             throw new NotFoundException("Нет прав.");
         }
-        BookingDtoGet bookingDtoGet = mapperBooking.bookingDtoGet(booking.get());
-        bookingDtoGet.setItem(new ItemDtoUp(item.getId(), item.getName()));
-        bookingDtoGet.setBooker(new UserDtoUp(booking.get().getBooker()));
-        return bookingDtoGet;
+        return mapperBooking.bookingDtoGet(booking,
+                new UserDtoUp(booking.getBooker()),
+                new ItemDtoUp(item.getId(), item.getName()));
     }
 
 
@@ -127,33 +106,27 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public List<BookingDtoGet> findBookingOwner(Long userId, String state) {
-        List<Long> ids = itemRepository.findAll().stream().map(Item::getUserId)
-                .collect(Collectors.toList());
-        if (!ids.contains(userId)) {
-            throw new NotFoundException("У пользователя нет вещей.");
-        }
         List<Long> id = itemRepository.findAll().stream()
                 .filter(item -> item.getUserId() == userId)
                 .map(Item::getId).collect(Collectors.toList());
-
+        if (id.isEmpty()) {
+            throw new NotFoundException("У пользователя нет вещей.");
+        }
         List<Booking> bookings = bookingRepository.findAll().stream()
                 .filter(booking -> id.contains(booking.getItemId()))
                 .sorted(new BookingComparator())
                 .collect(Collectors.toList());
-
         List<BookingDtoGet> bookingDtoGets = getBookingDtoGets(bookings);
         return sendBookingDto(bookingDtoGets, state);
     }
 
     private List<BookingDtoGet> getBookingDtoGets(List<Booking> bookings) {
         List<BookingDtoGet> bookingDtoGets = new ArrayList<>();
-        for (Booking b : bookings) {
-            BookingDtoGet bookingDtoGet = mapperBooking.bookingDtoGet(b);
-            Optional<Booking> booking = bookingRepository.findById(b.getId());
-            Long itemId = booking.get().getItemId();
-            Item item = itemRepository.findById(itemId).get();
-            bookingDtoGet.setItem(new ItemDtoUp(item.getId(), item.getName()));
-            bookingDtoGet.setBooker(new UserDtoUp(booking.get().getBooker()));
+        for (Booking booking : bookings) {
+            Item item = itemRepository.findById(booking.getItemId()).get();
+            BookingDtoGet bookingDtoGet = mapperBooking.bookingDtoGet(booking,
+                    new UserDtoUp(booking.getBooker()),
+                    new ItemDtoUp(item.getId(), item.getName()));
             bookingDtoGets.add(bookingDtoGet);
         }
         return bookingDtoGets;
@@ -170,49 +143,42 @@ public class BookingServiceImpl implements BookingService {
 
     private void validation(Long userId, BookingDto bookingDto) {
         validGet(userId);
-        Optional<Item> item = itemRepository.findById(bookingDto.getItemId());
-        if (item.isEmpty()) {
-            throw new NotFoundException("Такая вещь не существует.");
+        List<Booking> bookings = bookingRepository.findAll().stream()
+                .filter(booking -> booking.getStatus().equals(StatusItem.APPROVED))
+                .filter(booking -> Objects.equals(booking.getItemId(), bookingDto.getItemId()))
+                .filter(booking -> booking.getStart().isAfter(bookingDto.getStart())
+                        && booking.getEnd().isBefore(bookingDto.getStart())
+                        || booking.getStart().isAfter(bookingDto.getEnd())
+                        && booking.getEnd().isBefore(bookingDto.getEnd()))
+                .collect(Collectors.toList());
+        if (!bookings.isEmpty()) {
+            throw new NotAvailableBooking("Данный период не доступен для бронирования.");
         }
-        if (!item.get().getAvailable()) {
+        Item item = itemRepository.findById(bookingDto.getItemId())
+                .orElseThrow(() -> new NotFoundException("Такая вещь не существует."));
+        if (!item.getAvailable()) {
             throw new NotAvailableBooking("Не доступно для бронирования.");
         }
-        if (item.get().getUserId() == userId) {
-
+        if (item.getUserId() == userId) {
             throw new NotFoundException("Для Вас не доступна.");
-
         }
         if (bookingDto.getEnd().isBefore(bookingDto.getStart())) {
             throw new NotAvailableBooking("Окончание бронирование раньше начала.");
         }
-        if (bookingDto.getStart().isBefore(LocalDateTime.now())) {
-            throw new NotAvailableBooking("Начало бронирования в прошлом.");
-        }
     }
 
-    private void validUpdate(Long userId, Long bookingId) {
-        Optional<Booking> booking = bookingRepository.findById(bookingId);
-        if (booking.isEmpty()) {
-            throw new NotFoundException("Такого бронирования не существует.");
-        }
-        Optional<Item> item = itemRepository.findById(booking.get().getItemId());
-        if (item.isEmpty()) {
-            throw new NotFoundException("Такая вешь не существует.");
-        }
-        if (item.get().getUserId() != userId) {
+    private void validUpdate(Item item, Booking booking, Long userId) {
+        if (item.getUserId() != userId) {
             throw new NotFoundException("Нет прав.");
         }
-        if (booking.get().getStatus().equals(StatusItem.APPROVED)) {
+        if (booking.getStatus().equals(StatusItem.APPROVED)) {
             throw new NotAvailableBooking("Статус уже был подтвержден.");
         }
     }
 
     private void validGet(Long userId) {
-        List<Long> ids = userRepository.findAll().stream().map(User::getId)
-                .collect(Collectors.toList());
-        if (!ids.contains(userId)) {
-            throw new NotFoundException("Такой пользователь не существует.");
-        }
+        userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Такой пользователь не существует."));
     }
 
     public static class BookingComparator implements Comparator<Booking> {

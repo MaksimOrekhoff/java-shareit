@@ -33,37 +33,21 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public ItemDto addNewItem(Long userId, ItemDto itemDto) {
-        List<Long> ids = userDB.findAll().stream().map(User::getId).collect(Collectors.toList());
-        if (ids.contains(userId)) {
-            Item newItem = mapperItems.toItem(
-                    itemDto,
-                    userId,
-                    null
-            );
-            Item item = itemDB.save(newItem);
-            log.debug("Добавлена вещь: {}", item);
-            return mapperItems.toItemDto(item);
-        }
-        throw new NotFoundException("Такой пользователь не сущетсвует.");
+        userDB.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Такой пользователь не существует."));
+        Item newItem = mapperItems.toItem(itemDto, userId, null);
+        Item item = itemDB.save(newItem);
+        log.debug("Добавлена вещь: {}", item);
+        return mapperItems.toItemDto(item);
     }
 
     @Override
     public ItemDto update(Long userId, long itemId, ItemDto itemDto) {
-        List<Long> ids = userDB.findAll().stream()
-                .map(User::getId)
-                .collect(Collectors.toList());
-        if (!ids.contains(userId)) {
-            throw new NotFoundException("Такой пользователь не сущетсвует.");
-        }
+        userDB.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Такой пользователь не существует."));
 
-        List<Long> idItems = itemDB.findAll().stream()
-                .map(Item::getId)
-                .collect(Collectors.toList());
-        if (!idItems.contains(itemId)) {
-            throw new NotFoundException("Такая вещь не сущетсвует.");
-        }
-
-        Item checkOwner = itemDB.findById(itemId).get();
+        Item checkOwner = itemDB.findById(itemId)
+                .orElseThrow(() -> new NotFoundException("Такая вещь не сущетсвует."));
 
         if (checkOwner.getUserId() != userId) {
             log.debug("У вас нет прав для изменения вещи: {}", checkOwner);
@@ -83,15 +67,11 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public ItemDtoBooking getItem(Long itemId, Long userId) {
-        Optional<Item> item = itemDB.findById(itemId);
-        if (item.isEmpty()) {
-            throw new NotFoundException("Такая вещь не сущетсвует.");
-        }
-        ItemDtoBooking itemDtoBooking = mapperItems.toItemDtoBooking(item.get());
-
+        Item item = itemDB.findById(itemId)
+                .orElseThrow(() -> new NotFoundException("Такая вещь не сущетсвует."));
+        ItemDtoBooking itemDtoBooking = mapperItems.toItemDtoBooking(item);
         itemDtoBooking.setComments(toCommentDtos(itemId));
-
-        if (userId != item.get().getUserId()) {
+        if (userId != item.getUserId()) {
             return itemDtoBooking;
         }
         List<Booking> bookings = bookingRepository.findAll().stream()
@@ -113,10 +93,22 @@ public class ItemServiceImpl implements ItemService {
             }
 
         }
-        List<Booking> next = bookings.stream().filter(booking -> booking.getStart().isBefore(LocalDateTime.now())).collect(Collectors.toList());
-        itemDtoBooking.setLastBooking(new BookingDtoItem(next.get(0).getId(), next.get(0).getBooker()));
-        List<Booking> last = bookings.stream().filter(booking -> booking.getEnd().isAfter(LocalDateTime.now())).collect(Collectors.toList());
-        itemDtoBooking.setNextBooking(new BookingDtoItem(last.get(0).getId(), last.get(0).getBooker()));
+        return sendBooking(bookings, itemDtoBooking);
+    }
+
+    private ItemDtoBooking sendBooking(List<Booking> bookings, ItemDtoBooking itemDtoBooking) {
+        List<Booking> last = bookings.stream()
+                .filter(booking -> booking.getStart().isBefore(LocalDateTime.now()))
+                .limit(1)
+                .collect(Collectors.toList());
+        itemDtoBooking.setLastBooking(new BookingDtoItem(last.get(0).getId(),
+                last.get(0).getBooker()));
+        List<Booking> next = bookings.stream()
+                .filter(booking -> booking.getEnd().isAfter(LocalDateTime.now()))
+                .limit(1)
+                .collect(Collectors.toList());
+        itemDtoBooking.setNextBooking(new BookingDtoItem(next.get(0).getId(),
+                next.get(0).getBooker()));
         return itemDtoBooking;
     }
 
@@ -125,9 +117,9 @@ public class ItemServiceImpl implements ItemService {
                 .filter(comment -> comment.getItemId().equals(itemId))
                 .collect(Collectors.toList());
         List<CommentDto> commentDtos = new ArrayList<>();
-        for (Comment c : comments) {
-            Optional<User> user = userDB.findById(c.getAuthorId());
-            CommentDto commentDto = new CommentDto(c.getId(), c.getText(), user.get().getName(), c.getCreated());
+        for (Comment comment : comments) {
+            Optional<User> user = userDB.findById(comment.getAuthorId());
+            CommentDto commentDto = new CommentDto(comment.getId(), comment.getText(), user.get().getName(), comment.getCreated());
             commentDtos.add(commentDto);
         }
         return commentDtos;
@@ -139,8 +131,8 @@ public class ItemServiceImpl implements ItemService {
                 .filter(item -> item.getUserId() == userId)
                 .collect(Collectors.toList());
         Collection<ItemDtoBooking> itemDtoBookings = new ArrayList<>();
-        for (Item i : items) {
-            ItemDtoBooking itemDtoBooking = getItem(i.getId(), userId);
+        for (Item item : items) {
+            ItemDtoBooking itemDtoBooking = getItem(item.getId(), userId);
             itemDtoBookings.add(itemDtoBooking);
         }
         return itemDtoBookings;

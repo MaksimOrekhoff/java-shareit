@@ -4,6 +4,8 @@ import org.springframework.stereotype.Component;
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingDtoGet;
 import ru.practicum.shareit.booking.dto.BookingDtoUpdate;
+import ru.practicum.shareit.item.dto.ItemDtoUp;
+import ru.practicum.shareit.user.dto.UserDtoUp;
 
 
 @Component
@@ -16,28 +18,28 @@ public class MapperBooking {
                 StatusItem.WAITING);
     }
 
-    public BookingDtoUpdate toBookingDtoApp(Booking booking) {
+    public BookingDtoUpdate toBookingDtoApp(Booking booking, ItemDtoUp itemDtoUp, UserDtoUp userDtoUp) {
         return new BookingDtoUpdate(booking.getId(),
                 booking.getStatus(),
-                null,
-                null);
+                userDtoUp,
+                itemDtoUp);
     }
 
-    public Booking toBooking(BookingDto bookingDto) {
+    public Booking toBooking(BookingDto bookingDto, Long userId) {
         return new Booking(bookingDto.getId(),
                 bookingDto.getStart(),
                 bookingDto.getEnd(),
                 bookingDto.getItemId(),
-                null,
-                null);
+                userId,
+                StatusItem.WAITING);
     }
 
-    public BookingDtoGet bookingDtoGet(Booking booking) {
+    public BookingDtoGet bookingDtoGet(Booking booking, UserDtoUp userDtoUp, ItemDtoUp itemDtoUp) {
         return new BookingDtoGet(booking.getId(),
                 booking.getStart(),
                 booking.getEnd(),
                 booking.getStatus(),
-                null,
-                null);
+                userDtoUp,
+                itemDtoUp);
     }
 }
