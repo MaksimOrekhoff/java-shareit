@@ -2,12 +2,16 @@ package ru.practicum.shareit.item;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemDtoBooking;
+import ru.practicum.shareit.request.MyPageRequest;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Positive;
+import javax.validation.constraints.PositiveOrZero;
 import java.util.Collection;
 
 /**
@@ -18,7 +22,7 @@ import java.util.Collection;
 @Slf4j
 @RequestMapping("/items")
 public class ItemController {
-    private final ItemServiceImpl itemService;
+    private final ItemService itemService;
 
     @GetMapping("/{itemId}")
     public ItemDtoBooking getItem(@RequestHeader("X-Sharer-User-Id") Long userId, @PathVariable Long itemId) {
@@ -33,9 +37,12 @@ public class ItemController {
     }
 
     @GetMapping()
-    public Collection<ItemDtoBooking> getAllItemsUser(@RequestHeader("X-Sharer-User-Id") Long userId) {
+    public Collection<ItemDtoBooking> getAllItemsUser(@RequestHeader("X-Sharer-User-Id") Long userId,
+                                                      @PositiveOrZero @RequestParam(name = "from", defaultValue = "0") Integer from,
+                                                      @Positive @RequestParam(name = "size", defaultValue = "10") Integer size) {
+        final MyPageRequest pageRequest = new MyPageRequest(from, size, Sort.unsorted());
         log.info("Получен Get-запрос на получение вещей пользователя c id: {}", userId);
-        return itemService.getAllItemsUser(userId);
+        return itemService.getAllItemsUser(userId, pageRequest);
     }
 
     @PostMapping

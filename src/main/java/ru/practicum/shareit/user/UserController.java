@@ -2,10 +2,14 @@ package ru.practicum.shareit.user;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.shareit.request.MyPageRequest;
 import ru.practicum.shareit.user.dto.UserDto;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Positive;
+import javax.validation.constraints.PositiveOrZero;
 import java.util.Collection;
 
 /**
@@ -20,9 +24,11 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    public Collection<UserDto> getAll() {
+    public Collection<UserDto> getAll(@PositiveOrZero @RequestParam(name = "from", defaultValue = "0") Integer from,
+                                      @Positive @RequestParam(name = "size", defaultValue = "10") Integer size) {
+        final MyPageRequest pageRequest = new MyPageRequest(from, size, Sort.unsorted());
         log.info("Получен Get-запрос на получение всех пользователей.");
-        return userService.getAllUsers();
+        return userService.getAllUsers(pageRequest);
     }
 
     @GetMapping("/{id}")
