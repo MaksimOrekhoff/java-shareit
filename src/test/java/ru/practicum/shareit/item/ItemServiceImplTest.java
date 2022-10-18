@@ -19,16 +19,17 @@ import ru.practicum.shareit.request.MyPageRequest;
 import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserRepository;
 
+import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.context.jdbc.Sql.ExecutionPhase.AFTER_TEST_METHOD;
 import static org.springframework.test.context.jdbc.Sql.ExecutionPhase.BEFORE_TEST_METHOD;
 
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @SpringBootTest
+@Transactional
 class ItemServiceImplTest {
     private final ItemService itemService;
     private final UserRepository userDB;
@@ -66,13 +67,10 @@ class ItemServiceImplTest {
     }
 
     @Test
-    @SqlGroup({
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
-    })
     void addNewItemWithoutRequest() {
         userDB.save(requester);
-        userDB.save(ownerItem1);
-        ItemDto item = itemService.addNewItem(ownerItem1.getId(), itemDto1);
+        User user = userDB.save(ownerItem1);
+        ItemDto item = itemService.addNewItem(user.getId(), itemDto1);
 
         assertNotNull(item);
         assertEquals(item.getName(), itemDto1.getName());
@@ -92,7 +90,6 @@ class ItemServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void updateWithoutItem() {
         NotFoundException thrown = Assertions.assertThrows(NotFoundException.class, () -> {
@@ -108,7 +105,6 @@ class ItemServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void updateWithoutAccess() {
         NotFoundException thrown = Assertions.assertThrows(NotFoundException.class, () -> itemService.update(1L, itemDto1.getId(), itemDto1));
@@ -119,7 +115,6 @@ class ItemServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void addUpdate() {
         ItemDto itemDto = new ItemDto(1L, "newName",
@@ -141,7 +136,6 @@ class ItemServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void getItemUser() {
         ItemDtoBooking itemDto = itemService.getItem(itemDto1.getId(), requester.getId());
@@ -155,7 +149,6 @@ class ItemServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void getItemOwnerEmptyBooking() {
         ItemDtoBooking itemDto = itemService.getItem(itemDto1.getId(), ownerItem1.getId());
@@ -171,7 +164,6 @@ class ItemServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void getItemOwnerBooking() {
         bookingRepository.deleteById(1L);
@@ -188,7 +180,6 @@ class ItemServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void getAllItemsUser() {
         MyPageRequest myPageRequest = new MyPageRequest(0, 10, Sort.unsorted());
@@ -213,7 +204,6 @@ class ItemServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void searchItems() {
         List<ItemDto> itemDtos = (List<ItemDto>) itemService.searchItems("tem");
@@ -237,7 +227,6 @@ class ItemServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void addCommentNotUser() {
         CommentDto commentDto = new CommentDto(1L, "good", "Jane", LocalDateTime.now());
@@ -249,7 +238,6 @@ class ItemServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void addCommentCurrentBooking() {
         CommentDto commentDto = new CommentDto(1L, "good", "Jane", LocalDateTime.now());

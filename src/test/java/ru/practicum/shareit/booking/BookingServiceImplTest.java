@@ -15,18 +15,18 @@ import ru.practicum.shareit.exceptions.InvalidStatusException;
 import ru.practicum.shareit.exceptions.NotAvailableBooking;
 import ru.practicum.shareit.exceptions.NotFoundException;
 
+import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.springframework.test.context.jdbc.Sql.ExecutionPhase.AFTER_TEST_METHOD;
 import static org.springframework.test.context.jdbc.Sql.ExecutionPhase.BEFORE_TEST_METHOD;
 
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @SpringBootTest
+@Transactional
 class BookingServiceImplTest {
     private final BookingService bookingService;
-
     BookingDto bookingDto;
 
     @BeforeEach
@@ -48,7 +48,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void addNewBookingWithoutItem() {
         NotFoundException thrown = Assertions.assertThrows(NotFoundException.class, () -> {
@@ -62,7 +61,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void addNewBookingNotAvailable() {
         NotAvailableBooking thrown = Assertions.assertThrows(NotAvailableBooking.class, () -> {
@@ -76,7 +74,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void addNewBookingOwner() {
         NotFoundException thrown = Assertions.assertThrows(NotFoundException.class, () -> {
@@ -90,7 +87,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void addNewBookingFalseTime() {
         NotAvailableBooking thrown = Assertions.assertThrows(NotAvailableBooking.class, () -> {
@@ -105,7 +101,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"beforeAddBook.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void addNewBooking() {
         BookingDto newBooking = new BookingDto(1L, 1L,
@@ -134,7 +129,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void updateBookingStatus() {
         NotAvailableBooking thrown = Assertions.assertThrows(NotAvailableBooking.class, () -> bookingService.update(3L, 2L, true));
@@ -145,7 +139,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void updateBookingNotAva() {
         NotFoundException thrown = Assertions.assertThrows(NotFoundException.class, () -> bookingService.update(1L, 2L, true));
@@ -167,7 +160,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void updateBookingTrue() {
         BookingDtoGet booking = bookingService.update(3L, 1L, true);
@@ -181,7 +173,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void updateBookingFalse() {
         BookingDtoGet booking = bookingService.update(3L, 1L, false);
@@ -195,7 +186,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void findBookingNotAccess() {
         NotFoundException thrown = Assertions.assertThrows(NotFoundException.class, () -> bookingService.findBooking(1L, 1L));
@@ -206,7 +196,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void findBooking() {
         BookingDtoGet booking = bookingService.findBooking(2L, 1L);
@@ -226,7 +215,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void findBookingAll() {
         List<BookingDtoGet> booking = bookingService.findAllBooking(2L, "ALL", 0, 10);
@@ -240,7 +228,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void findBookingAllFromNot0() {
         List<BookingDtoGet> booking = bookingService.findAllBooking(2L, "ALL", 1, 10);
@@ -254,7 +241,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void findBookingFuture() {
         List<BookingDtoGet> booking = bookingService.findAllBooking(2L, "FUTURE", 0, 10);
@@ -268,7 +254,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void findBookingCurrent() {
         List<BookingDtoGet> booking = bookingService.findAllBooking(2L, "CURRENT", 0, 10);
@@ -279,7 +264,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void findBookingPast() {
         List<BookingDtoGet> booking = bookingService.findAllBooking(2L, "PAST", 0, 10);
@@ -290,7 +274,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void findBookingWaiting() {
         List<BookingDtoGet> booking = bookingService.findAllBooking(2L, "WAITING", 0, 10);
@@ -304,7 +287,6 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void findBookingRejected() {
         List<BookingDtoGet> booking = bookingService.findAllBooking(2L, "REJECTED", 0, 10);
@@ -315,12 +297,9 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void findBookingThrow() {
-        InvalidStatusException thrown = Assertions.assertThrows(InvalidStatusException.class, () -> {
-            bookingService.findAllBooking(2L, "any", 0, 10);
-        });
+        InvalidStatusException thrown = Assertions.assertThrows(InvalidStatusException.class, () -> bookingService.findAllBooking(2L, "any", 0, 10));
 
         Assertions.assertEquals("Unknown state: UNSUPPORTED_STATUS", thrown.getMessage());
     }
@@ -328,10 +307,9 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void findBookingOwnerWithoutItem() {
-                NotFoundException thrown = Assertions.assertThrows(NotFoundException.class, () -> bookingService.findBookingOwner(4L, "any", 0, 10));
+        NotFoundException thrown = Assertions.assertThrows(NotFoundException.class, () -> bookingService.findBookingOwner(4L, "any", 0, 10));
 
         Assertions.assertEquals("У пользователя нет вещей.", thrown.getMessage());
     }
@@ -339,10 +317,9 @@ class BookingServiceImplTest {
     @Test
     @SqlGroup({
             @Sql(value = {"before.sql"}, executionPhase = BEFORE_TEST_METHOD),
-            @Sql(value = {"after.sql"}, executionPhase = AFTER_TEST_METHOD)
     })
     void findBookingOwner() {
-                List<BookingDtoGet> booking = bookingService.findBookingOwner(3L, "ALL", 0, 10);
+        List<BookingDtoGet> booking = bookingService.findBookingOwner(3L, "ALL", 0, 10);
 
         assertEquals(booking.size(), 2);
         assertEquals(booking.get(0).getId(), 2L);

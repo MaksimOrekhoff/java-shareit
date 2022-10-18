@@ -12,12 +12,14 @@ import ru.practicum.shareit.exceptions.NotFoundException;
 import ru.practicum.shareit.request.MyPageRequest;
 import ru.practicum.shareit.user.dto.UserDto;
 
+import javax.transaction.Transactional;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @SpringBootTest
+@Transactional
 class UserServiceImplTest {
     private final UserRepository userRepository;
     private final UserServiceImpl userService;

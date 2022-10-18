@@ -8,12 +8,14 @@ import ru.practicum.shareit.request.ItemRequestRepository;
 import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserRepository;
 
+import javax.transaction.Transactional;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @DataJpaTest
+@Transactional
 class ItemRepositoryTest {
     @Autowired
     UserRepository userRepository;
@@ -24,7 +26,7 @@ class ItemRepositoryTest {
 
     @Test
     void search() {
-        User user = userRepository.save(new User(1L, "user10", "user10@mail.com"));
+        userRepository.save(new User(1L, "user10", "user10@mail.com"));
         Item item = itemRepository.save(new Item(1L, "item1", "отвертка", true, 1L, null));
 
         List<Item> result = itemRepository.search("Отвер");
