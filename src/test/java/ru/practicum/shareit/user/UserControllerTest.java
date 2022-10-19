@@ -31,6 +31,8 @@ class UserControllerTest {
     MockMvc mockMvc;
     UserDto userDto;
     private final ObjectMapper mapper = new ObjectMapper();
+    String path = "/users";
+    String pathId = "/users/1";
 
     @BeforeEach
     void startParam() {
@@ -46,7 +48,7 @@ class UserControllerTest {
         when(userService.getAllUsers(myPageRequest))
                 .thenReturn(Collections.emptyList());
 
-        mockMvc.perform(get("/users"))
+        mockMvc.perform(get(path))
                 .andExpect(status().isOk())
                 .andExpect(content().json("[]"));
 
@@ -60,8 +62,10 @@ class UserControllerTest {
         when(userService.getAllUsers(myPageRequest))
                 .thenReturn(Collections.singletonList(userDto));
 
-        mockMvc.perform(get("/users?from=0&size=10")
+        mockMvc.perform(get(path)
                         .content(mapper.writeValueAsString(userDto))
+                        .param("from", "0")
+                        .param("size", "10")
                         .characterEncoding(StandardCharsets.UTF_8)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -78,7 +82,7 @@ class UserControllerTest {
         when(userService.getById(1L))
                 .thenReturn(userDto);
 
-        mockMvc.perform(get("/users/1")
+        mockMvc.perform(get(pathId)
                         .content(mapper.writeValueAsString(userDto))
                         .characterEncoding(StandardCharsets.UTF_8)
                         .contentType(MediaType.APPLICATION_JSON))
@@ -96,7 +100,7 @@ class UserControllerTest {
         when(userService.create(any()))
                 .thenReturn(userDto);
 
-        mockMvc.perform(post("/users")
+        mockMvc.perform(post(path)
                         .content(mapper.writeValueAsString(userDto))
                         .characterEncoding(StandardCharsets.UTF_8)
                         .contentType(MediaType.APPLICATION_JSON))
@@ -114,7 +118,7 @@ class UserControllerTest {
         when(userService.change(1L, userDto))
                 .thenReturn(userDto);
 
-        mockMvc.perform(patch("/users/1")
+        mockMvc.perform(patch(pathId)
                         .content(mapper.writeValueAsString(userDto))
                         .characterEncoding(StandardCharsets.UTF_8)
                         .contentType(MediaType.APPLICATION_JSON))
@@ -130,7 +134,7 @@ class UserControllerTest {
     @Test
     void remove_ok() throws Exception {
         //Act
-        mockMvc.perform(delete("/users/1"))
+        mockMvc.perform(delete(pathId))
                 .andExpect(status().isOk());
         //Assert
         verify(userService).remove(1L);

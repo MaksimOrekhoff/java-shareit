@@ -48,6 +48,8 @@ class ItemControllerTest {
     BookingDtoItem lastBooking;
     BookingDtoItem nextBooking;
     CommentDto commentDto;
+    String path = "/items";
+    String pathId = "/items/1";
 
     @BeforeEach
     void startParam() {
@@ -95,7 +97,7 @@ class ItemControllerTest {
         when(itemService.getItem(itemDto.getId(), owner.getId()))
                 .thenReturn(itemDtoBookingOwner);
 
-        mockMvc.perform(get("/items/1")
+        mockMvc.perform(get(pathId)
                         .header("X-Sharer-User-Id", owner.getId())
                         .content(mapper.writeValueAsString(itemDtoBookingOwner))
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -117,7 +119,7 @@ class ItemControllerTest {
         when(itemService.getItem(itemDto.getId(), booker1.getId()))
                 .thenReturn(itemDtoBooking);
 
-        mockMvc.perform(get("/items/1")
+        mockMvc.perform(get(pathId)
                         .header("X-Sharer-User-Id", booker1.getId())
                         .content(mapper.writeValueAsString(itemDtoBooking))
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -137,7 +139,8 @@ class ItemControllerTest {
         when(itemService.searchItems("item"))
                 .thenReturn(Collections.singletonList(itemDto));
 
-        mockMvc.perform(get("/items/search?text=item")
+        mockMvc.perform(get(path + "/search")
+                        .param("text", "item")
                         .content(mapper.writeValueAsString(itemDto))
                         .characterEncoding(StandardCharsets.UTF_8)
                         .contentType(MediaType.APPLICATION_JSON))
@@ -158,8 +161,10 @@ class ItemControllerTest {
         when(itemService.getAllItemsUser(owner.getId(), myPageRequest))
                 .thenReturn(Collections.singletonList(itemDtoBooking));
 
-        mockMvc.perform(get("/items?from=0&size=10")
+        mockMvc.perform(get(path)
                         .header("X-Sharer-User-Id", owner.getId())
+                        .param("from", "0")
+                        .param("size", "10")
                         .content(mapper.writeValueAsString(itemDtoBooking))
                         .characterEncoding(StandardCharsets.UTF_8)
                         .contentType(MediaType.APPLICATION_JSON))
@@ -179,7 +184,7 @@ class ItemControllerTest {
         when(itemService.addNewItem(owner.getId(), itemDto))
                 .thenReturn(itemDto);
 
-        mockMvc.perform(post("/items")
+        mockMvc.perform(post(path)
                         .header("X-Sharer-User-Id", owner.getId())
                         .content(mapper.writeValueAsString(itemDto))
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -200,7 +205,7 @@ class ItemControllerTest {
         when(itemService.update(owner.getId(), itemDto.getId(), itemDto))
                 .thenReturn(itemDto);
 
-        mockMvc.perform(patch("/items/1")
+        mockMvc.perform(patch(pathId)
                         .header("X-Sharer-User-Id", owner.getId())
                         .content(mapper.writeValueAsString(itemDto))
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -221,7 +226,7 @@ class ItemControllerTest {
         when(itemService.addComment(booker1.getId(), itemDto.getId(), commentDto))
                 .thenReturn(commentDto);
 
-        mockMvc.perform(post("/items/1/comment")
+        mockMvc.perform(post(pathId + "/comment")
                         .header("X-Sharer-User-Id", booker1.getId())
                         .content(mapper.writeValueAsString(commentDto))
                         .characterEncoding(StandardCharsets.UTF_8)

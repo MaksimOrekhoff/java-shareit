@@ -39,6 +39,8 @@ class ItemRequestControllerTest {
     UserDto userDto;
     ItemRequestDto itemRequestDto;
     ItemRequestUserDto itemRequestUserDto;
+    String path = "/requests";
+    String pathId = "/requests/1";
 
     @BeforeEach
     void startParam() {
@@ -61,8 +63,10 @@ class ItemRequestControllerTest {
                 .thenReturn(Collections.singletonList(itemRequestUserDto));
 
 
-        mockMvc.perform(get("/requests/all?from=0&size=10")
+        mockMvc.perform(get(path + "/all")
                         .header("X-Sharer-User-Id", userDto.getId())
+                        .param("from", "0")
+                        .param("size", "10")
                         .content(mapper.writeValueAsString(itemRequestUserDto))
                         .characterEncoding(StandardCharsets.UTF_8)
                         .contentType(MediaType.APPLICATION_JSON))
@@ -82,7 +86,7 @@ class ItemRequestControllerTest {
         when(itemRequestService.findAllItemRequestUser(userDto.getId()))
                 .thenReturn(Collections.singletonList(itemRequestUserDto));
 
-        mockMvc.perform(get("/requests")
+        mockMvc.perform(get(path)
                         .header("X-Sharer-User-Id", userDto.getId())
                         .content(mapper.writeValueAsString(itemRequestUserDto))
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -103,7 +107,7 @@ class ItemRequestControllerTest {
         when(itemRequestService.findById(itemRequestUserDto.getId(), userDto.getId()))
                 .thenReturn(itemRequestUserDto);
 
-        mockMvc.perform(get("/requests/1")
+        mockMvc.perform(get(pathId)
                         .header("X-Sharer-User-Id", userDto.getId())
                         .content(mapper.writeValueAsString(itemRequestUserDto))
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -124,7 +128,7 @@ class ItemRequestControllerTest {
         when(itemRequestService.create(itemRequestDto, userDto.getId()))
                 .thenReturn(itemRequestDto);
 
-        mockMvc.perform(post("/requests")
+        mockMvc.perform(post(path)
                         .header("X-Sharer-User-Id", userDto.getId())
                         .content(mapper.writeValueAsString(itemRequestDto))
                         .characterEncoding(StandardCharsets.UTF_8)

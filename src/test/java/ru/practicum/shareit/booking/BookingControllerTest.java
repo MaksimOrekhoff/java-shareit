@@ -41,6 +41,8 @@ class BookingControllerTest {
     BookingDtoGet bookingDtoGet;
     BookingDto bookingDto;
     UserDtoUp userDtoUp;
+    String path = "/bookings";
+    String pathId = "/bookings/1";
 
     @BeforeEach
     void startParam() {
@@ -72,7 +74,7 @@ class BookingControllerTest {
         when(bookingService.addNewBooking(1L, bookingDto))
                 .thenReturn(bookingDtoGet);
 
-        mockMvc.perform(post("/bookings")
+        mockMvc.perform(post(path)
                         .header("X-Sharer-User-Id", 1L)
                         .content(mapper.writeValueAsString(bookingDto))
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -93,7 +95,7 @@ class BookingControllerTest {
         when(bookingService.update(anyLong(), anyLong(), eq(true)))
                 .thenReturn(bookingDtoGet);
 
-        mockMvc.perform(patch("/bookings/1")
+        mockMvc.perform(patch(pathId)
                         .header("X-Sharer-User-Id", owner.getId())
                         .content(mapper.writeValueAsString(bookingDtoGet))
                         .param("approved", "true")
@@ -115,7 +117,7 @@ class BookingControllerTest {
         when(bookingService.findBooking(owner.getId(), bookingDto.getId()))
                 .thenReturn(bookingDtoGet);
 
-        mockMvc.perform(get("/bookings/1")
+        mockMvc.perform(get(pathId)
                         .header("X-Sharer-User-Id", owner.getId())
                         .content(mapper.writeValueAsString(bookingDtoGet))
                         .characterEncoding(StandardCharsets.UTF_8)
@@ -136,8 +138,11 @@ class BookingControllerTest {
         when(bookingService.findAllBooking(booker1.getId(), "ALL", 0, 10))
                 .thenReturn(Collections.singletonList(bookingDtoGet));
 
-        mockMvc.perform(get("/bookings?from=0&size=10")
+        mockMvc.perform(get(path)
                         .header("X-Sharer-User-Id", booker1.getId())
+                        .param("state", "ALL")
+                        .param("from", "0")
+                        .param("size", "10")
                         .content(mapper.writeValueAsString(bookingDtoGet))
                         .characterEncoding(StandardCharsets.UTF_8)
                         .contentType(MediaType.APPLICATION_JSON))
@@ -157,7 +162,7 @@ class BookingControllerTest {
         when(bookingService.findBookingOwner(owner.getId(), "ALL", 0, 10))
                 .thenReturn(Collections.singletonList(bookingDtoGet));
 
-        mockMvc.perform(get("/bookings/owner")
+        mockMvc.perform(get(path + "/owner")
                         .header("X-Sharer-User-Id", owner.getId())
                         .param("state", "ALL")
                         .param("from", "0")
