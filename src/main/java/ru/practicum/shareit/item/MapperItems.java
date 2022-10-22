@@ -13,7 +13,8 @@ public class MapperItems {
         return new ItemDto(item.getId(),
                 item.getName(),
                 item.getDescription(),
-                item.getAvailable());
+                item.getAvailable(),
+                item.getRequestId());
     }
 
     public ItemDtoBooking toItemDtoBooking(Item item) {

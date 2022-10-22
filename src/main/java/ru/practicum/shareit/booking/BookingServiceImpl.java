@@ -2,62 +2,70 @@ package ru.practicum.shareit.booking;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingDtoGet;
-import ru.practicum.shareit.booking.dto.BookingDtoUpdate;
 import ru.practicum.shareit.exceptions.InvalidStatusException;
 import ru.practicum.shareit.exceptions.NotAvailableBooking;
 import ru.practicum.shareit.exceptions.NotFoundException;
 import ru.practicum.shareit.item.ItemRepository;
 import ru.practicum.shareit.item.dto.ItemDtoUp;
 import ru.practicum.shareit.item.model.Item;
+import ru.practicum.shareit.request.MyPageRequest;
 import ru.practicum.shareit.user.UserRepository;
 import ru.practicum.shareit.user.dto.UserDtoUp;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
-
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
     private final MapperBooking mapperBooking;
 
     @Override
-    public BookingDto addNewBooking(Long userId, BookingDto bookingDto) {
+    public BookingDtoGet addNewBooking(Long userId, BookingDto bookingDto) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Такой пользователь не существует."));
+        Item item = itemRepository.findById(bookingDto.getItemId())
+                .orElseThrow(() -> new NotFoundException("Такая вещь не существует."));
         validation(userId, bookingDto);
         Booking booking = mapperBooking.toBooking(bookingDto, userId);
         Booking newBooking = bookingRepository.save(booking);
-        return mapperBooking.toBookingDto(newBooking);
+        return mapperBooking.bookingDtoGet(newBooking,
+                new UserDtoUp(booking.getBooker()),
+                new ItemDtoUp(item.getId(), item.getName()));
     }
 
     @Override
-    public BookingDtoUpdate update(Long userId, Long bookingId, Boolean approved) {
+    public BookingDtoGet update(Long userId, Long bookingId, Boolean approved) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new NotFoundException("Такого бронирования не существует."));
-        Item item = itemRepository.findById(booking.getItemId())
-                .orElseThrow(() -> new NotFoundException("Такая вещь не существует."));
+        Item item = itemRepository.findById(booking.getItemId()).get();
         validUpdate(item, booking, userId);
         StatusItem statusItem = approved ? StatusItem.APPROVED : StatusItem.REJECTED;
         booking.setStatus(statusItem);
         Booking newBooking = bookingRepository.save(booking);
-        return mapperBooking.toBookingDtoApp(newBooking,
-                new ItemDtoUp(item.getId(), item.getName()),
-                new UserDtoUp(newBooking.getBooker()));
+        return mapperBooking.bookingDtoGet(newBooking,
+                new UserDtoUp(newBooking.getBooker()),
+                new ItemDtoUp(item.getId(), item.getName()));
     }
 
     @Override
     public BookingDtoGet findBooking(Long userId, Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new NotFoundException("Такого бронирования не существует."));
-        Item item = itemRepository.findById(booking.getItemId())
-                .orElseThrow(() -> new NotFoundException("Такой вещи не существует."));
+        Item item = itemRepository.findById(booking.getItemId()).get();//remove excep
         if (!(Objects.equals(userId, booking.getBooker()) ||
                 Objects.equals(item.getUserId(), userId))) {
             throw new NotFoundException("Нет прав.");
@@ -69,9 +77,13 @@ public class BookingServiceImpl implements BookingService {
 
 
     @Override
-    public List<BookingDtoGet> findAllBooking(Long userId, String state) {
+    public List<BookingDtoGet> findAllBooking(Long userId, String state, Integer from, Integer size) {
         validGet(userId);
-        return sendBookingDto(stateAll(userId), state);
+        if (Objects.equals(from, size) && from != 0) {
+            from = from + 2;
+        }
+        final MyPageRequest pageRequest = new MyPageRequest(from, size, Sort.by("start").descending());
+        return sendBookingDto(stateAll(userId, pageRequest), state);
     }
 
     private List<BookingDtoGet> sendBookingDto(List<BookingDtoGet> bookingDtoGet, String state) {
@@ -105,16 +117,17 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingDtoGet> findBookingOwner(Long userId, String state) {
+    public List<BookingDtoGet> findBookingOwner(Long userId, String state, Integer from, Integer size) {
+        final MyPageRequest pageRequest = new MyPageRequest(from, size, Sort.by("start").descending());
         List<Long> id = itemRepository.findAll().stream()
                 .filter(item -> item.getUserId() == userId)
                 .map(Item::getId).collect(Collectors.toList());
         if (id.isEmpty()) {
             throw new NotFoundException("У пользователя нет вещей.");
         }
-        List<Booking> bookings = bookingRepository.findAll().stream()
+        List<Booking> bookings = bookingRepository.findAll(pageRequest).stream()
                 .filter(booking -> id.contains(booking.getItemId()))
-                .sorted(new BookingComparator())
+                // .sorted(new BookingComparator())
                 .collect(Collectors.toList());
         List<BookingDtoGet> bookingDtoGets = getBookingDtoGets(bookings);
         return sendBookingDto(bookingDtoGets, state);
@@ -133,16 +146,15 @@ public class BookingServiceImpl implements BookingService {
     }
 
 
-    private List<BookingDtoGet> stateAll(Long userId) {
-        List<Booking> bookings = bookingRepository.findAll().stream()
+    private List<BookingDtoGet> stateAll(Long userId, PageRequest pageRequest) {
+        List<Booking> bookings = bookingRepository.findAll(pageRequest).stream()
                 .filter(booking -> Objects.equals(booking.getBooker(), userId))
-                .sorted(new BookingComparator())
+                // .sorted(new BookingComparator())
                 .collect(Collectors.toList());
         return getBookingDtoGets(bookings);
     }
 
     private void validation(Long userId, BookingDto bookingDto) {
-        validGet(userId);
         List<Booking> bookings = bookingRepository.findAll().stream()
                 .filter(booking -> booking.getStatus().equals(StatusItem.APPROVED))
                 .filter(booking -> Objects.equals(booking.getItemId(), bookingDto.getItemId()))
@@ -154,8 +166,7 @@ public class BookingServiceImpl implements BookingService {
         if (!bookings.isEmpty()) {
             throw new NotAvailableBooking("Данный период не доступен для бронирования.");
         }
-        Item item = itemRepository.findById(bookingDto.getItemId())
-                .orElseThrow(() -> new NotFoundException("Такая вещь не существует."));
+        Item item = itemRepository.findById(bookingDto.getItemId()).get();//remove excep
         if (!item.getAvailable()) {
             throw new NotAvailableBooking("Не доступно для бронирования.");
         }

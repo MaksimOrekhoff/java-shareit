@@ -20,9 +20,7 @@ public class ItemDtoBooking {
     private String description;
     @NotNull
     private Boolean available;
-
     private BookingDtoItem lastBooking;
-
     private BookingDtoItem nextBooking;
     private List<CommentDto> comments;
 }

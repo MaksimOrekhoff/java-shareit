@@ -7,12 +7,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class ErrorHandler {
-    @ExceptionHandler({UserExistException.class})
-    @ResponseStatus(HttpStatus.CONFLICT)
-    public ErrorResponse validationExceptionHandler(UserExistException e) {
-        return new ErrorResponse(e.getMessage());
-    }
-
     @ExceptionHandler({NotAvailableBooking.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse validationExceptionHandler(NotAvailableBooking e) {

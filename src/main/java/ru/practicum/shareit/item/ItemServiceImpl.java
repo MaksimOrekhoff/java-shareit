@@ -2,6 +2,7 @@ package ru.practicum.shareit.item;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.booking.Booking;
 import ru.practicum.shareit.booking.BookingRepository;
@@ -14,6 +15,8 @@ import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemDtoBooking;
 import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
+import ru.practicum.shareit.request.ItemRequest;
+import ru.practicum.shareit.request.ItemRequestRepository;
 import ru.practicum.shareit.user.User;
 import ru.practicum.shareit.user.UserRepository;
 
@@ -28,16 +31,25 @@ public class ItemServiceImpl implements ItemService {
     private final ItemRepository itemDB;
     private final UserRepository userDB;
     private final BookingRepository bookingRepository;
-    private final MapperItems mapperItems;
     private final CommentDB commentDB;
+    private final ItemRequestRepository itemRequestRepository;
+    private final MapperItems mapperItems;
 
     @Override
     public ItemDto addNewItem(Long userId, ItemDto itemDto) {
         userDB.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Такой пользователь не существует."));
-        Item newItem = mapperItems.toItem(itemDto, userId, null);
+        Long itemRequestId;
+        if (itemDto.getRequestId() == null) {
+            itemRequestId = null;
+        } else {
+            Optional<ItemRequest> itemRequest = itemRequestRepository.findById(itemDto.getRequestId());
+            itemRequestId = itemRequest.get().getId();
+        }
+
+        Item newItem = mapperItems.toItem(itemDto, userId, itemRequestId);
         Item item = itemDB.save(newItem);
-        log.debug("Добавлена вещь: {}", item);
+        log.info("Добавлена вещь: {}", item);
         return mapperItems.toItemDto(item);
     }
 
@@ -59,7 +71,7 @@ public class ItemServiceImpl implements ItemService {
                 itemDto.getDescription() == null ? checkOwner.getDescription() : itemDto.getDescription(),
                 itemDto.getAvailable() == null ? checkOwner.getAvailable() : itemDto.getAvailable(),
                 userId,
-                null
+                checkOwner.getRequestId()
         );
         Item item = itemDB.save(newItem);
         return mapperItems.toItemDto(item);
@@ -101,8 +113,13 @@ public class ItemServiceImpl implements ItemService {
                 .filter(booking -> booking.getStart().isBefore(LocalDateTime.now()))
                 .limit(1)
                 .collect(Collectors.toList());
-        itemDtoBooking.setLastBooking(new BookingDtoItem(last.get(0).getId(),
-                last.get(0).getBooker()));
+        if (last.isEmpty()) {
+            itemDtoBooking.setLastBooking(null);
+        } else {
+            itemDtoBooking.setLastBooking(new BookingDtoItem(last.get(0).getId(),
+                    last.get(0).getBooker()));
+        }
+
         List<Booking> next = bookings.stream()
                 .filter(booking -> booking.getEnd().isAfter(LocalDateTime.now()))
                 .limit(1)
@@ -126,8 +143,8 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public Collection<ItemDtoBooking> getAllItemsUser(Long userId) {
-        Collection<Item> items = itemDB.findAll().stream()
+    public Collection<ItemDtoBooking> getAllItemsUser(Long userId, PageRequest pageRequest) {
+        Collection<Item> items = itemDB.findAll(pageRequest).stream()
                 .filter(item -> item.getUserId() == userId)
                 .collect(Collectors.toList());
         Collection<ItemDtoBooking> itemDtoBookings = new ArrayList<>();
@@ -143,9 +160,7 @@ public class ItemServiceImpl implements ItemService {
         if (text.length() == 0) {
             return new ArrayList<>();
         }
-        Collection<Item> items = itemDB.search(text).stream()
-                .filter(Item::getAvailable)
-                .collect(Collectors.toList());
+        Collection<Item> items = new ArrayList<>(itemDB.search(text));
         return collectionDto(items);
 
     }
@@ -187,7 +202,7 @@ public class ItemServiceImpl implements ItemService {
         }
         Optional<User> user = userDB.findById(userId);
         if (user.isEmpty()) {
-            throw new NotFoundException("Такая пользователь не сущетсвует.");
+            throw new NotFoundException("Такой пользователь не сущетсвует.");
         }
 
     }
